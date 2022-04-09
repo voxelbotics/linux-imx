@@ -1978,6 +1978,7 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	ret = pm_runtime_resume_and_get(dev);
 	if (ret < 0)
 		return ret;
+ 
 
 	if (is_c45) {
 		frame_start = FEC_MMFR_ST_C45;
@@ -2330,6 +2331,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	snprintf(fep->mii_bus->id, MII_BUS_ID_SIZE, "%s-%x",
 		pdev->name, fep->dev_id + 1);
 	fep->mii_bus->priv = fep;
+	fep->mii_bus->probe_capabilities = MDIOBUS_C22_C45;
 	fep->mii_bus->parent = &pdev->dev;
 
 	err = of_mdiobus_register(fep->mii_bus, node);
