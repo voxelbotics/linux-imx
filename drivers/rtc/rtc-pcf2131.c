@@ -547,7 +547,7 @@ static int pcf2131_probe(struct device *dev, struct regmap *regmap,
 		return ret;
 	}
 
-	return rtc_register_device(pcf2131->rtc);
+	return devm_rtc_register_device(pcf2131->rtc);
 }
 
 #ifdef CONFIG_OF
