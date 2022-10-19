@@ -1098,7 +1098,7 @@
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>; //, <&pinctrl_wlan>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>; //, <&pinctrl_wlan>;
 	keep-power-in-suspend;
-	bus-width = <4>;
+	bus-width = <1>;
 	non-removable;
 	wakeup-source;
 	fsl,sdio-interrupt-enabled;
