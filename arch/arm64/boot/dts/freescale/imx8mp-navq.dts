@@ -27,7 +27,6 @@
 		stdout-path = &uart2;
 	};
 
-/*
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
@@ -36,10 +35,10 @@
 		status {
 			label = "status";
 			gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;
-			default-state = "on"; // LED GREEN 
+			default-state = "on"; // LED GREEN
 		};
 	};
-*/
+
 	reg_can1_en: regulator-can1-gen {
 		compatible = "regulator-fixed";
 		regulator-name = "can1-en";
