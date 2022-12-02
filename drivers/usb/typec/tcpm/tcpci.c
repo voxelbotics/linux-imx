@@ -521,6 +521,7 @@ static int tcpci_vbus_force_discharge(struct tcpc_dev *tcpc, bool enable)
 static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 {
 	struct tcpci *tcpci = tcpc_to_tcpci(tcpc);
+	unsigned int reg;
 	int ret;
 
 	if (tcpci->data->set_vbus) {
@@ -531,15 +532,16 @@ static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 	}
 
 	/* Disable both source and sink first before enabling anything */
+	regmap_read(tcpci->regmap, TCPC_POWER_STATUS, &reg);
 
-	if (!source) {
+	if (!source && (reg & TCPC_POWER_STATUS_SOURCING_VBUS)) {
 		ret = regmap_write(tcpci->regmap, TCPC_COMMAND,
 				   TCPC_CMD_DISABLE_SRC_VBUS);
 		if (ret < 0)
 			return ret;
 	}
 
-	if (!sink) {
+	if (source && !sink && (reg & TCPC_POWER_STATUS_SINKING_VBUS)) {
 		ret = regmap_write(tcpci->regmap, TCPC_COMMAND,
 				   TCPC_CMD_DISABLE_SINK_VBUS);
 		if (ret < 0)
