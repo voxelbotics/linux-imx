@@ -765,6 +765,7 @@
                 reg = <0x52>;
                 interrupt-parent = <&gpio3>;
                 interrupts = <23 8>;
+                status = "disabled";
 
                 port {
                         typec_dr_sw_port2: endpoint {
@@ -1031,7 +1032,7 @@
 
 &usb3_phy0 {
 	status = "okay";
-	vbus-power-supply = <&ptn5110>;
+//	vbus-power-supply = <&ptn5110>;
 };
 
 &usb3_0 {
@@ -1064,7 +1065,7 @@
         fsl,pcs-tx-deemph-3p5db = <0x21>;
         fsl,phy-pcs-tx-swing-full = <0x7f>;
 	status = "okay";
-	vbus-power-supply = <&ptn5110_port2>;
+//	vbus-power-supply = <&ptn5110_port2>;
 };
 
 &usb3_1 {
@@ -1072,7 +1073,7 @@
 };
 
 &usb_dwc3_1 {
-	dr_mode = "otg";
+	dr_mode = "peripheral";
         hnp-disable;
         srp-disable;
         adp-disable;
