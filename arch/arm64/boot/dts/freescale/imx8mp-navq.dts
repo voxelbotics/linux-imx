@@ -1097,10 +1097,12 @@
 
 
 &usdhc1 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default", "state_100mhz"; /*, "state_200mhz";*/
 	pinctrl-0 = <&pinctrl_usdhc1>; //, <&pinctrl_wlan>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>; //, <&pinctrl_wlan>;
-	pinctrl-2 = <&pinctrl_usdhc1_200mhz>; //, <&pinctrl_wlan>;
+	/* Comment out the pinctrl-2 for disabling SDR104 mode, which causes
+	 * SDIO/WIFI instabilities */
+	/* pinctrl-2 = <&pinctrl_usdhc1_200mhz>; */ //, <&pinctrl_wlan>;
 	keep-power-in-suspend;
 	bus-width = <4>;
 	non-removable;
