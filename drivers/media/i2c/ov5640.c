@@ -188,6 +188,11 @@ struct reg_value {
 	u32 delay_ms;
 };
 
+struct reg_array {
+	const struct reg_value *reg_data;
+	u32 reg_data_size;
+};
+
 struct ov5640_mode_info {
 	enum ov5640_mode_id id;
 	enum ov5640_downsize_mode dn_mode;
@@ -259,6 +264,8 @@ struct ov5640_dev {
 
 	bool pending_mode_change;
 	bool streaming;
+
+	struct reg_array aawb_settings;
 };
 
 static inline struct ov5640_dev *to_ov5640_dev(struct v4l2_subdev *sd)
@@ -363,6 +370,10 @@ static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3a1b, 0x30, 0, 0}, {0x3a1e, 0x26, 0, 0}, {0x3a11, 0x60, 0, 0},
 	{0x3a1f, 0x14, 0, 0}, {0x3008, 0x42, 0, 0}, {0x3c00, 0x04, 0, 300},
 	{0x302c, 0xc2, 0, 0},
+};
+
+static const struct reg_value ov5640_init_supertek[] = {
+	{0x518a, 0x34, 0, 0},
 };
 
 static const struct reg_value ov5640_setting_VGA_640_480[] = {
@@ -1197,17 +1208,16 @@ static int ov5640_set_timings(struct ov5640_dev *sensor,
 	return ov5640_write_reg16(sensor, OV5640_REG_TIMING_VTS, mode->vtot);
 }
 
-static int ov5640_load_regs(struct ov5640_dev *sensor,
-			    const struct ov5640_mode_info *mode)
+static int _ov5640_load_regs(struct ov5640_dev *sensor,
+		const struct reg_value *regs, u32 size)
 {
-	const struct reg_value *regs = mode->reg_data;
 	unsigned int i;
 	u32 delay_ms;
 	u16 reg_addr;
 	u8 mask, val;
 	int ret = 0;
 
-	for (i = 0; i < mode->reg_data_size; ++i, ++regs) {
+	for (i = 0; i < size; ++i, ++regs) {
 		delay_ms = regs->delay_ms;
 		reg_addr = regs->reg_addr;
 		val = regs->val;
@@ -1229,6 +1239,21 @@ static int ov5640_load_regs(struct ov5640_dev *sensor,
 		if (delay_ms)
 			usleep_range(1000 * delay_ms, 1000 * delay_ms + 100);
 	}
+
+	return ret;
+}
+
+static int ov5640_load_regs(struct ov5640_dev *sensor,
+			    const struct ov5640_mode_info *mode)
+{
+	int ret;
+
+	const struct reg_value *regs = mode->reg_data;
+
+	ret = _ov5640_load_regs(sensor, regs, mode->reg_data_size);
+
+	if (ret < 0)
+		return ret;
 
 	return ov5640_set_timings(sensor, mode);
 }
@@ -1946,6 +1971,11 @@ static int ov5640_restore_mode(struct ov5640_dev *sensor)
 	if (ret < 0)
 		return ret;
 	sensor->last_mode = &ov5640_mode_init_data;
+
+	if (sensor->aawb_settings.reg_data) {
+		_ov5640_load_regs(sensor, sensor->aawb_settings.reg_data,
+				sensor->aawb_settings.reg_data_size);
+	}
 
 	ret = ov5640_mod_reg(sensor, OV5640_REG_SYS_ROOT_DIVIDER, 0x3f,
 			     (ilog2(OV5640_SCLK2X_ROOT_DIV) << 2) |
@@ -3292,6 +3322,15 @@ static int ov5640_probe(struct i2c_client *client)
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
 		goto free_ctrls;
+
+	/* Advanced AWB settings are lens specific and may differ per module,
+	 * so adjust them if needed */
+	if (of_property_read_bool(dev->of_node, "supertek")) {
+		sensor->aawb_settings.reg_data = ov5640_init_supertek;
+		sensor->aawb_settings.reg_data_size =
+			ARRAY_SIZE(ov5640_init_supertek);
+		printk("Supertek ov5640 module found\n");
+	}
 
 	return 0;
 
