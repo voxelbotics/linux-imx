@@ -461,6 +461,8 @@ struct tcpm_port {
 
 	/* port belongs to a self powered device */
 	bool self_powered;
+	/* do not perform detachment when initializing */
+	bool no_init_reset;
 
 	/* Sink FRS */
 	enum frs_typec_current new_source_frs_current;
@@ -3580,13 +3582,13 @@ static bool tcpm_start_toggling(struct tcpm_port *port, enum typec_cc_status cc)
 	return ret == 0;
 }
 
-static int tcpm_init_vbus(struct tcpm_port *port)
+static int tcpm_init_vbus(struct tcpm_port *port, bool keep_sink)
 {
 	int ret;
-
-	ret = port->tcpc->set_vbus(port->tcpc, false, false);
+	/* NOTE: keep sinking VBUS unless doing recovery */
+	ret = port->tcpc->set_vbus(port->tcpc, false, keep_sink);
 	port->vbus_source = false;
-	port->vbus_charge = false;
+	port->vbus_charge = keep_sink;
 	return ret;
 }
 
@@ -3713,7 +3715,7 @@ static void tcpm_set_partner_usb_comm_capable(struct tcpm_port *port, bool capab
 		port->tcpc->set_partner_usb_comm_capable(port->tcpc, capable);
 }
 
-static void tcpm_reset_port(struct tcpm_port *port)
+static void tcpm_reset_port(struct tcpm_port *port, bool keep_sink)
 {
 	tcpm_enable_auto_vbus_discharge(port, false);
 	port->in_ams = false;
@@ -3733,7 +3735,7 @@ static void tcpm_reset_port(struct tcpm_port *port)
 	port->rx_msgid = -1;
 
 	port->tcpc->set_pd_rx(port->tcpc, false);
-	tcpm_init_vbus(port);	/* also disables charging */
+	tcpm_init_vbus(port, keep_sink);	/* also disables charging */
 	tcpm_init_vconn(port);
 	tcpm_set_current_limit(port, 0, 0);
 	tcpm_set_polarity(port, TYPEC_POLARITY_CC1);
@@ -3770,7 +3772,7 @@ static void tcpm_detach(struct tcpm_port *port)
 		port->tcpc->set_bist_data(port->tcpc, false);
 	}
 
-	tcpm_reset_port(port);
+	tcpm_reset_port(port, false);
 }
 
 static void tcpm_src_detach(struct tcpm_port *port)
@@ -4243,7 +4245,6 @@ static void run_state_machine(struct tcpm_port *port)
 		opmode =  tcpm_get_pwr_opmode(port->polarity ?
 					      port->cc2 : port->cc1);
 		typec_set_pwr_opmode(port->typec_port, opmode);
-		port->pwr_opmode = TYPEC_PWR_MODE_USB;
 		port->negotiated_rev = PD_MAX_REV;
 		port->message_id = 0;
 		port->rx_msgid = -1;
@@ -4846,7 +4847,7 @@ static void run_state_machine(struct tcpm_port *port)
 		tcpm_set_state(port, PORT_RESET, 0);
 		break;
 	case PORT_RESET:
-		tcpm_reset_port(port);
+		tcpm_reset_port(port, false);
 		tcpm_set_cc(port, TYPEC_CC_OPEN);
 		tcpm_set_state(port, PORT_RESET_WAIT_OFF,
 			       PD_T_ERROR_RECOVERY);
@@ -5921,18 +5922,17 @@ swap_unlock:
 static void tcpm_init(struct tcpm_port *port)
 {
 	enum typec_cc_status cc1, cc2;
+	int vbus;
 
 	port->tcpc->init(port->tcpc);
 
-	tcpm_reset_port(port);
+	tcpm_set_state(port, tcpm_default_state(port), 0);
 
-	/*
-	 * XXX
-	 * Should possibly wait for VBUS to settle if it was enabled locally
-	 * since tcpm_reset_port() will disable VBUS.
-	 */
-	port->vbus_present = port->tcpc->get_vbus(port->tcpc);
-	if (port->vbus_present)
+	if (port->tcpc->get_cc(port->tcpc, &cc1, &cc2) == 0)
+		_tcpm_cc_change(port, cc1, cc2);
+
+	vbus = port->tcpc->get_vbus(port->tcpc);
+	if (vbus)
 		port->vbus_never_low = true;
 
 	/*
@@ -5946,23 +5946,24 @@ static void tcpm_init(struct tcpm_port *port)
 	 * 3. When vbus_present is false and TCPC does support querying vsafe0v,
 	 * then, query tcpc for vsafe0v status.
 	 */
-	if (port->vbus_present)
-		port->vbus_vsafe0v = false;
-	else if (!port->tcpc->is_vbus_vsafe0v)
-		port->vbus_vsafe0v = true;
-	else
-		port->vbus_vsafe0v = port->tcpc->is_vbus_vsafe0v(port->tcpc);
+	if (vbus) {
+		_tcpm_pd_vbus_on(port);
+	} else {
+		_tcpm_pd_vbus_off(port);
+		if (!port->tcpc->is_vbus_vsafe0v || port->tcpc->is_vbus_vsafe0v(port->tcpc))
+			_tcpm_pd_vbus_vsafe0v(port);
+	}
 
-	tcpm_set_state(port, tcpm_default_state(port), 0);
-
-	if (port->tcpc->get_cc(port->tcpc, &cc1, &cc2) == 0)
-		_tcpm_cc_change(port, cc1, cc2);
+	/* reset internal state, but keep sinking VBUS if requested */
+	tcpm_reset_port(port, port->no_init_reset &&
+		port->vbus_present && port->state == SNK_ATTACH_WAIT);
 
 	/*
 	 * Some adapters need a clean slate at startup, and won't recover
 	 * otherwise. So do not try to be fancy and force a clean disconnect.
 	 */
-	tcpm_set_state(port, PORT_RESET, 0);
+	if (!port->no_init_reset)
+		tcpm_set_state(port, PORT_RESET, 0);
 }
 
 static int tcpm_port_type_set(struct typec_port *p, enum typec_port_type type)
@@ -6132,6 +6133,7 @@ static int tcpm_fw_get_caps(struct tcpm_port *port,
 
 sink:
 	port->self_powered = fwnode_property_read_bool(fwnode, "self-powered");
+	port->no_init_reset = fwnode_property_read_bool(fwnode, "no-init-reset");
 
 	if (!port->pd_supported)
 		return 0;
@@ -6590,7 +6592,7 @@ void tcpm_unregister_port(struct tcpm_port *port)
 	hrtimer_cancel(&port->vdm_state_machine_timer);
 	hrtimer_cancel(&port->state_machine_timer);
 
-	tcpm_reset_port(port);
+	tcpm_reset_port(port, false);
 
 	tcpm_port_unregister_pd(port);
 

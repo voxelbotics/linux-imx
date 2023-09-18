@@ -118,7 +118,6 @@
 		regulator-always-on;
 	};*/
 
-
 	cbtl04gp {  // redriver switch, could be called PTN36043BXY
 		compatible = "nxp,cbtl04gp";
 		pinctrl-names = "default";
@@ -133,24 +132,20 @@
 		};
 	};
 
+	cbtl04gp_port2 {  // redriver switch, could be called PTN36043BXY
+		compatible = "nxp,cbtl04gp";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_typec_mux_port2>;
+		switch-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
+		orientation-switch;
 
+		port {
+			usb3_data_ss_port2: endpoint {
+				remote-endpoint = <&typec_con_ss_port2>;
+			};
+		};
 
-        cbtl04gp_port2 {  // redriver switch, could be called PTN36043BXY
-                compatible = "nxp,cbtl04gp";
-                pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_typec_mux_port2>;
-                switch-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
-                orientation-switch;
-
-                port {
-                        usb3_data_ss_port2: endpoint {
-                                remote-endpoint = <&typec_con_ss_port2>;
-                        };
-                };
-
-        };
-
-
+	};
 
 /*
 	bt_sco_codec: bt_sco_codec {
@@ -716,97 +711,91 @@
 };
 
 &i2c4 {
-        clock-frequency = <100000>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_i2c4>;
-        status = "okay";
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4>;
+	status = "okay";
 
+	ptn5110: tcpc@51 {
+		compatible = "nxp,ptn5110";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_typec>;
+		reg = <0x51>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <28 8>;
 
+		port {
+			typec_dr_sw: endpoint {
+				remote-endpoint = <&usb3_drd_sw>;
+			};
+		};
 
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C Port1";
+			power-role = "dual";
+			data-role = "dual";
+			try-power-role = "source";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
+				     PDO_VAR(5000, 20000, 3000)>;
+			op-sink-microwatt = <15000000>;
+			self-powered;
 
-        ptn5110: tcpc@51 {
-                compatible = "nxp,ptn5110";
-                pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_typec>;
-                reg = <0x51>;
-                interrupt-parent = <&gpio4>;
-                interrupts = <28 8>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
 
-                port {
-                        typec_dr_sw: endpoint {
-                                remote-endpoint = <&usb3_drd_sw>;
-                        };
-                };
-
-                usb_con: connector {
-                        compatible = "usb-c-connector";
-                        label = "USB-C Port1";
-                        power-role = "dual";
-                        data-role = "dual";
-                        try-power-role = "sink";
-                        source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
-                        sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
-                                     PDO_VAR(5000, 20000, 3000)>;
-                        op-sink-microwatt = <15000000>;
-
-                        ports {
-                                #address-cells = <1>;
-                                #size-cells = <0>;
-
-                                port@1 {
-                                        reg = <1>;
-                                        typec_con_ss: endpoint {
-                                                remote-endpoint = <&usb3_data_ss>;
-                                        };
-                                };
-                        };
-                };
-        };
-
-
+				port@1 {
+					reg = <1>;
+					typec_con_ss: endpoint {
+						remote-endpoint = <&usb3_data_ss>;
+					};
+				};
+			};
+		};
+	};
 
 	ptn5110_port2: tcpc_port2@52 {
-                compatible = "nxp,ptn5110";
-                pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_typec_port2>;
-                reg = <0x52>;
-                interrupt-parent = <&gpio3>;
-                interrupts = <23 8>;
-                status = "disabled";
+		compatible = "nxp,ptn5110";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_typec_port2>;
+		reg = <0x52>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <23 8>;
 
-                port {
-                        typec_dr_sw_port2: endpoint {
-                                remote-endpoint = <&usb3_drd_sw2>;
-                        };
-                };
+		port {
+			typec_dr_sw_port2: endpoint {
+				remote-endpoint = <&usb3_drd_sw2>;
+			};
+		};
 
-                usb_con_port2: connector {
-                        compatible = "usb-c-connector";
-                        label = "USB-C Port2";
-                        power-role = "dual";
-                        data-role = "dual";
-                        try-power-role = "sink";
-                        source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
-                        sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
-                                     PDO_VAR(5000, 20000, 3000)>;
-                        op-sink-microwatt = <15000000>;
+		usb_con_port2: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C Port2";
+			power-role = "dual";
+			data-role = "dual";
+			try-power-role = "sink";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
+				     PDO_VAR(5000, 20000, 3000)>;
+			op-sink-microwatt = <15000000>;
+			self-powered;
+			no-init-reset;
 
-                        ports {
-                                #address-cells = <1>;
-                                #size-cells = <0>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
 
-                                port@1 {
-                                        reg = <1>;
-                                        typec_con_ss_port2: endpoint {
-                                                remote-endpoint = <&usb3_data_ss_port2>;
-                                        };
-                                };
-                        };
-                };
-        };
-
-
-
+				port@1 {
+					reg = <1>;
+					typec_con_ss_port2: endpoint {
+						remote-endpoint = <&usb3_data_ss_port2>;
+					};
+				};
+			};
+		};
+	};
 };
 
 &i2c6 {
@@ -1038,8 +1027,13 @@
 
 
 &usb3_phy0 {
+	fsl,phy-tx-vref-tune = <0xe>;
+	fsl,phy-tx-preemp-amp-tune = <3>;
+	fsl,phy-tx-vboost-level = <5>;
+	fsl,phy-comp-dis-tune = <7>;
+	fsl,pcs-tx-deemph-3p5db = <0x21>;
+	fsl,phy-pcs-tx-swing-full = <0x7f>;
 	status = "okay";
-//	vbus-power-supply = <&ptn5110>;
 };
 
 &usb3_0 {
@@ -1052,6 +1046,9 @@
 	srp-disable;
 	adp-disable;
 	usb-role-switch;
+	role-switch-default-mode = "none";
+	snps,dis-u1-entry-quirk;
+	snps,dis-u2-entry-quirk;
 	status = "okay";
 
 	port {
@@ -1060,19 +1057,15 @@
 		};
 	};
 };	
-	
-
-
 
 &usb3_phy1 {
-        fsl,phy-tx-vref-tune = <6>;
-        fsl,phy-tx-rise-tune = <0>;
-        fsl,phy-tx-preemp-amp-tune = <3>;
-        fsl,phy-comp-dis-tune = <7>;
-        fsl,pcs-tx-deemph-3p5db = <0x21>;
-        fsl,phy-pcs-tx-swing-full = <0x7f>;
+	fsl,phy-tx-vref-tune = <0xe>;
+	fsl,phy-tx-preemp-amp-tune = <3>;
+	fsl,phy-tx-vboost-level = <5>;
+	fsl,phy-comp-dis-tune = <7>;
+	fsl,pcs-tx-deemph-3p5db = <0x21>;
+	fsl,phy-pcs-tx-swing-full = <0x7f>;
 	status = "okay";
-//	vbus-power-supply = <&ptn5110_port2>;
 };
 
 &usb3_1 {
@@ -1080,18 +1073,21 @@
 };
 
 &usb_dwc3_1 {
-	dr_mode = "peripheral";
-        hnp-disable;
-        srp-disable;
-        adp-disable;
-        usb-role-switch;
-        status = "okay";
+	dr_mode = "otg";
+	hnp-disable;
+	srp-disable;
+	adp-disable;
+	usb-role-switch;
+	role-switch-default-mode = "none";
+	snps,dis-u1-entry-quirk;
+	snps,dis-u2-entry-quirk;
+	status = "okay";
 
-        port {
-                usb3_drd_sw2: endpoint {
-                        remote-endpoint = <&typec_dr_sw_port2>;
-                };
-        };
+	port {
+		usb3_drd_sw2: endpoint {
+			remote-endpoint = <&typec_dr_sw_port2>;
+		};
+	};
 };
 
 
@@ -1365,21 +1361,17 @@
 		>;
 	};
 
-
-
 	pinctrl_typec: typec1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI3_RXFS__GPIO4_IO28	0x1c4
 		>;
 	};
 
-        pinctrl_typec_port2: typec1grp_port2 {
-                fsl,pins = <
-                        MX8MP_IOMUXC_SAI5_RXD2__GPIO3_IO23     0x1c4
-                >;
-        };
-
-
+	pinctrl_typec_port2: typec1grp_port2 {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_RXD2__GPIO3_IO23     0x1c4
+		>;
+	};
 
 	pinctrl_typec_mux: typec1muxgrp {
 		fsl,pins = <
@@ -1387,13 +1379,11 @@
 		>;
 	};
 
-        pinctrl_typec_mux_port2: typec1muxgrp_port2 {
-                fsl,pins = <
-                        MX8MP_IOMUXC_SAI5_RXD1__GPIO3_IO22 0x16
-                >;
-        };
-
-
+	pinctrl_typec_mux_port2: typec1muxgrp_port2 {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_RXD1__GPIO3_IO22 0x16
+		>;
+	};
 
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <
