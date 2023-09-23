@@ -131,8 +131,8 @@ struct ov5640_pixfmt {
 
 static const struct ov5640_pixfmt ov5640_formats[] = {
 	{ MEDIA_BUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG, },
-	{ MEDIA_BUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_SRGB, },
-	{ MEDIA_BUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_SRGB, },
+	{ MEDIA_BUS_FMT_UYVY8_1X16, V4L2_COLORSPACE_SRGB, },
+	{ MEDIA_BUS_FMT_YUYV8_1X16, V4L2_COLORSPACE_SRGB, },
 	{ MEDIA_BUS_FMT_RGB565_2X8_LE, V4L2_COLORSPACE_SRGB, },
 	{ MEDIA_BUS_FMT_RGB565_2X8_BE, V4L2_COLORSPACE_SRGB, },
 	{ MEDIA_BUS_FMT_SBGGR8_1X8, V4L2_COLORSPACE_SRGB, },
@@ -2318,12 +2318,12 @@ static int ov5640_set_framefmt(struct ov5640_dev *sensor,
 	u8 fmt, mux;
 
 	switch (format->code) {
-	case MEDIA_BUS_FMT_UYVY8_2X8:
+	case MEDIA_BUS_FMT_UYVY8_1X16:
 		/* YUV422, UYVY */
 		fmt = 0x3f;
 		mux = OV5640_FMT_MUX_YUV422;
 		break;
-	case MEDIA_BUS_FMT_YUYV8_2X8:
+	case MEDIA_BUS_FMT_YUYV8_1X16:
 		/* YUV422, YUYV */
 		fmt = 0x30;
 		mux = OV5640_FMT_MUX_YUV422;
@@ -3063,7 +3063,7 @@ static int ov5640_probe(struct i2c_client *client)
 	 * YUV422 UYVY VGA@30fps
 	 */
 	fmt = &sensor->fmt;
-	fmt->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	fmt->code = MEDIA_BUS_FMT_UYVY8_1X16;
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
