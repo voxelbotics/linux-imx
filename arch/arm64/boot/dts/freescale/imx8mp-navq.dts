@@ -364,6 +364,7 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <0>;
 			qca,disable-smarteee;
+			qca,disable-hibernation-mode;
 			vddio-supply = <&vddio>;
 
 			vddio: vddio-regulator {
