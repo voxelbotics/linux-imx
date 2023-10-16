@@ -518,7 +518,7 @@ static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 			return ret;
 	}
 
-	if (source && !sink && (reg & TCPC_POWER_STATUS_SINKING_VBUS)) {
+	if (!sink && (reg & TCPC_POWER_STATUS_SINKING_VBUS)) {
 		ret = regmap_write(tcpci->regmap, TCPC_COMMAND,
 				   TCPC_CMD_DISABLE_SINK_VBUS);
 		if (ret < 0)
